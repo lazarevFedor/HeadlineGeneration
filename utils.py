@@ -2,10 +2,8 @@ import razdel
 import spacy
 from spacy.cli import download
 
-# Список частей речи, которые исключаются
 BAD_POS = ("PREP", "NPRO", "CONJ", "PRCL", "NUMR", "PRED", "INTJ", "PUNCT", "CCONJ", "ADP", "DET", "ADV")
 
-# Загружаем модель для русского языка
 download("ru_core_news_md")
 spacy_model = spacy.load("ru_core_news_md")
 
