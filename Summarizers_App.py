@@ -1,4 +1,4 @@
-# main.py
+# Summarizers_App.py
 import tkinter as tk
 from tkinter import messagebox
 from text_rank import TextRankSummarizer
