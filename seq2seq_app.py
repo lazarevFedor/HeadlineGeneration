@@ -15,7 +15,7 @@ model = GPT2LMHeadModel.from_pretrained(model_path)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model.to(device)
 
-# ✅ Функция генерации заголовка
+# Функция генерации заголовка
 def generate_title(news_text):
     input_text = f"Текст новости: {news_text} [SEP] Заголовок:"
     input_ids = tokenizer.encode(input_text, return_tensors="pt").to(device)
@@ -37,7 +37,7 @@ def generate_title(news_text):
     generated_title = generated_text.split("Заголовок:")[-1].strip()
     return generated_title
 
-# ✅ Основной класс приложения
+# Основной класс приложения
 class TitleGeneratorApp(QWidget):
     def __init__(self):
         super().__init__()
@@ -70,7 +70,7 @@ class TitleGeneratorApp(QWidget):
         # Применяем лейаут к окну
         self.setLayout(layout)
 
-    # ✅ Метод генерации заголовка по нажатию кнопки
+    # Метод генерации заголовка по нажатию кнопки
     def on_generate(self):
         news_text = self.input_text.toPlainText()
         if news_text.strip():
@@ -82,7 +82,7 @@ class TitleGeneratorApp(QWidget):
         else:
             self.output_label.setText("Введите текст новости!")
 
-# ✅ Запуск приложения
+# Запуск приложения
 def main():
     app = QApplication(sys.argv)
     ex = TitleGeneratorApp()
