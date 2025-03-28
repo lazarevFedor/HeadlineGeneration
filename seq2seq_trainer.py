@@ -7,19 +7,6 @@ from transformers import (GPT2Tokenizer, GPT2LMHeadModel,
                           DataCollatorForLanguageModeling,
                           TrainingArguments, Trainer)
 
-# Функция для очистки текста
-def clean_text(text):
-    if not isinstance(text, str):
-        return ""
-    text = re.sub(r"[^а-яА-ЯёЁ .,!?]", "", text)
-    text = re.sub(r"\s+", " ", text).strip()
-    return text
-
-
-# Дополнительная фильтрация: убираем строки, где нет букв (например, содержатся только пробелы или пунктуация)
-def has_letters(text):
-    # Проверяем наличие хотя бы одной русской буквы в тексте
-    return bool(re.search(r"[а-яА-ЯёЁ]", text))
 
 
 def tokenize_function(examples):
@@ -33,6 +20,20 @@ df = pd.read_csv(file_path, low_memory=False)
 
 # Оставляем только нужные колонки: 'title' и 'text'
 df = df[['title', 'text']]
+
+
+# Функция для очистки текста
+def clean_text(text):
+    if not isinstance(text, str):
+        return ""
+    text = re.sub(r"[^а-яА-ЯёЁ .,!?]", "", text)
+    text = re.sub(r"\s+", " ", text).strip()
+    return text
+
+
+# Дополнительная фильтрация: наличие хотя бы одной русской буквы в тексте
+def has_letters(text):
+    return bool(re.search(r"[а-яА-ЯёЁ]", text))
 
 # Очистка текста
 df['text'] = df['text'].apply(clean_text)
