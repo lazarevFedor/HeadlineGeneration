@@ -48,7 +48,7 @@ df = df.reset_index(drop=True)
 # Подготовка входных данных и целевых значений для обучения
 df['input'] = "Текст новости: " + df['text'] + " [SEP] Заголовок:"
 df['target'] = df['title']
-df = df.sample(50000, random_state=42)
+df = df.sample(75000, random_state=42)
 
 # Разделение датасета на выборки
 train_data, val_data = train_test_split(df, test_size=0.1, random_state=42)
@@ -96,8 +96,8 @@ training_args = TrainingArguments(
     logging_strategy="steps",
     logging_steps=500,
     save_strategy="steps",
-    save_steps=5000,
-    num_train_epochs=3,
+    save_steps=10000,
+    num_train_epochs=6,
     per_device_train_batch_size=4,
     learning_rate=5e-5,
     warmup_steps=500,
@@ -157,7 +157,6 @@ generated_title = generate_title(article, model, tokenizer)
 print("Текст новости:", article)
 print("Сгенерированный заголовок:", generated_title)
 
-output_dir = "."
+output_dir = "./modelFolder"
 model.save_pretrained(output_dir)
 tokenizer.save_pretrained(output_dir)
-
