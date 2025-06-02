@@ -8,15 +8,9 @@ from transformers import (GPT2Tokenizer, GPT2LMHeadModel,
                           TrainingArguments, Trainer)
 
 
-
-def tokenize_function(examples):
-    return tokenizer(examples["text"], truncation=True, padding="max_length", max_length=128)
-
-
 file_path = "/kaggle/input/corpus-of-russian-news-articles-from-lenta/lenta-ru-news.csv"
 
 df = pd.read_csv(file_path, low_memory=False)
-
 
 # Оставляем только нужные колонки: 'title' и 'text'
 df = df[['title', 'text']]
@@ -61,6 +55,16 @@ val_dataset = Dataset.from_dict({"text": val_data['input'].tolist(),
                                  "label": val_data['target'].tolist()})
 
 print("Пример обучающего текста из набора:", train_dataset[0])
+
+
+def tokenize_function(examples):
+    return tokenizer(
+        examples["text"],
+        truncation=True,
+        padding="max_length",
+        max_length=128
+    )
+
 
 # Токенизация
 tokenizer = GPT2Tokenizer.from_pretrained("sberbank-ai/rugpt3small_based_on_gpt2")
