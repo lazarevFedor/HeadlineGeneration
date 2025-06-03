@@ -5,7 +5,7 @@ from transformers import GPT2Tokenizer, GPT2LMHeadModel
 import torch
 
 # Путь к сохранённой модели
-model_path = "./newModel"
+model_path = "./models/last"
 
 # Загружаем модель и токенизатор
 tokenizer = GPT2Tokenizer.from_pretrained(model_path)
