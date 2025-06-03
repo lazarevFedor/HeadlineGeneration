@@ -4,20 +4,43 @@ import re
 from datetime import datetime
 from sklearn.model_selection import train_test_split
 from datasets import Dataset
-from transformers import (GPT2Tokenizer, GPT2LMHeadModel,
-                          DataCollatorForLanguageModeling,
-                          TrainingArguments, Trainer)
+import evaluate
+from transformers import (GPT2Tokenizer, GPT2LMHeadModel, DataCollatorForLanguageModeling,
+                          TrainingArguments, Trainer, TrainerCallback)
 import shutil
 
 
+
+
 def main():
-    DS_AMOUNT = 75000  # кол-во данных для обучения
+    DS_AMOUNT = 150000  # кол-во данных для обучения
     OUTPUT_DIR = "./modelFolder"
+
+    class ShowExamplesCallback(TrainerCallback):
+        def on_evaluate(self, args, state, control, **kwargs):
+            print("\n📊 Примеры генерации на валидации:")
+            model.eval()
+            for i in range(3):
+                input_text = val_data['input'].iloc[i]
+                reference = val_data['target'].iloc[i]
+                news = input_text.replace("Текст новости: ", "").split(" [SEP]")[0]
+                generated = generate_title(news)
+                print(f"\n📰 Новости: {news[:250]}...")
+                print(f"✅ Оригинал: {reference}")
+                print(f"🤖 Модель:   {generated}")
+            print("-" * 80)
 
     # Логгер
     def log(msg):
         print(f"{datetime.now()} : {msg}")
 
+    rouge = evaluate.load("rouge")
+
+    def compute_metrics(eval_preds):
+        preds, labels = eval_preds
+        preds = tokenizer.batch_decode(preds, skip_special_tokens=True)
+        labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
+        return rouge.compute(predictions=preds, references=labels)
     # Функция для очистки текста;
     # Работаем только с Кириллицей и знаками препинания;
     def clean_text(text):
@@ -40,27 +63,39 @@ def main():
         )
 
     # Определение функции генерации заголовков
-    def generate_title(news_text, in_model, tknzr):
+    def generate_title(news_text):
+        news_text = news_text[:800]  # Ограничим длину до ~800 символов
         input_text = f"Текст новости: {news_text} [SEP] Заголовок:"
-        input_ids = tknzr.encode(input_text, return_tensors="pt").to(device)
+        input_ids = tokenizer.encode(input_text, return_tensors="pt").to(device)
 
-        output = in_model.generate(
+        output = model.generate(
             input_ids,
             min_length=5,  # Минимальная длина заголовка
-            max_new_tokens=20,  # Максимальная длина заголовка
-            num_beams=10,  # Beam Search для улучшения качества
+            max_new_tokens=30,  # Максимальная длина заголовка
+            num_beams=15,  # Beam Search для повышения качества
             no_repeat_ngram_size=2,  # Предотвращение повторений
-            temperature=0.7,  # Контроль случайности
-            top_k=50,  # Убираем маловероятные токены
-            top_p=0.9,  # Top-p sampling
-            do_sample=True,  # Включаем сэмплирование
-            early_stopping=True  # Прерываем генерацию при достижении токена конца
+            do_sample=False,  # Выключаем сэмплирование
+            early_stopping=True  # Прерываем генерацию при достижении конца
         )
+        # Постобработка
+        generated_text = tokenizer.decode(output[0], skip_special_tokens=True)
+        generated_title = generated_text.split("Заголовок:")[-1].strip()
+        # Удалим лишние фразы и мусор
+        generated_title = re.sub(r'[^а-яА-ЯёЁ0-9 .,!?-]', '', generated_title)
+        generated_title = re.sub(r'\s+', ' ', generated_title).strip()
 
-        # Декодирование и возврат заголовка
-        gen_text = tknzr.decode(output[0], skip_special_tokens=True)
-        gen_title = gen_text.split("Заголовок:")[-1].strip()
-        return gen_title
+        # Если есть неполный конец — отбросим после последней точки
+        if '.' in generated_title:
+            generated_title = generated_title.rsplit('.', 1)[0] + '.'
+
+        print(generated_title)
+        return generated_title
+
+    def remove_patterns(text):
+        text = re.sub(r"в номер.*", "", text)
+        text = re.sub(r"Видео.*", "", text)
+        return text.strip()
+
 
     file_path = "/kaggle/input/corpus-of-russian-news-articles-from-lenta/lenta-ru-news.csv"
 
@@ -77,6 +112,10 @@ def main():
 
     # Избавляемся от ненужной пунктуации
     df = df[df['text'].apply(has_letters) & df['title'].apply(has_letters)]
+
+    #Избавляемся от хвостов "в номере от мая"/"видео доступно"
+    df['title'] = df['title'].apply(remove_patterns)
+
     log("Датасет очищен")
 
     # Переиндексирование датасета
@@ -139,11 +178,12 @@ def main():
         eval_strategy="epoch",
         logging_strategy="epoch",
         save_strategy="epoch",
-        num_train_epochs=8,
+        num_train_epochs=12,
         per_device_train_batch_size=4,
         gradient_accumulation_steps=8,
         learning_rate=5e-5,
         warmup_steps=500,
+        lr_scheduler_type="cosine",
         weight_decay=0.01,
         report_to="none",
         fp16=True,
@@ -155,7 +195,9 @@ def main():
         args=training_args,
         train_dataset=train_dataset,
         eval_dataset=val_dataset,
-        data_collator=data_collator
+        data_collator=data_collator,
+        compute_metrics = compute_metrics,
+        callbacks = [ShowExamplesCallback()]
     )
 
     log("Тренер готов к работе")
@@ -167,6 +209,7 @@ def main():
 
     print("🔍 2.Используем DDP:", torch.distributed.is_initialized())
     print("🧠 2.Текущий ранг процесса:", torch.distributed.get_rank() if torch.distributed.is_initialized() else "N/A")
+
 
     article = (
         "Россия в ближайшие годы будет наращивать объем финансирования исследований в сфере искусственного интеллекта, "
