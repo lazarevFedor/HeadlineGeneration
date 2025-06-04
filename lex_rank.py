@@ -5,23 +5,29 @@ from utils import tokenize_sentence
 class LexRankSummarizer:
     def __init__(self, threshold=0.0):
         self.threshold = threshold
+        # Словарь для хранения IDF токенов
         self._idf = {}
 
+    # __call__ генерирует заголовок
     def __call__(self, sentences, sentence_count=1):
         if not sentences:
             return []
 
-        processed = []
-        doc_freq = {}
+        processed = [] # Обработанные предложения
+        doc_freq = {} # Частота токенов во всех предложениях
+        # Шаг 1: Предобработка предложений и вычисление частоты токенов
         for i, s in enumerate(sentences):
-            tokens = tokenize_sentence(s)
+            tokens = tokenize_sentence(s) # Токенизация предложения
             tf = {}
+            # Вычисление частоты слова в предложении
             for token in tokens:
                 tf[token] = tf.get(token, 0) + 1
+            # Обновление частоты слова в тексте
             for token in set(tokens):
                 doc_freq[token] = doc_freq.get(token, 0) + 1
             processed.append({'index': i, 'text': s, 'tf': tf})
         total_docs = len(processed)
+        # Шаг 2: Вычисление TF-IDF
         for sent in processed:
             norm_sq = 0.0
             for token, count in sent['tf'].items():
@@ -29,10 +35,12 @@ class LexRankSummarizer:
                 self._idf[token] = idf
                 norm_sq += (count * idf) ** 2
             sent['norm'] = math.sqrt(norm_sq)
-
+        # Шаг 3: Построение матрицы схожести
         matrix = self._create_similarity_matrix(processed)
         markov_matrix = self._normalize_matrix(matrix)
-        ranks = self._power_method(markov_matrix)
+
+        # Шаг 4: Применение алгоритма Page-Rank
+        ranks = self._iterate(markov_matrix)
 
         indexes = self._argsort(ranks, reverse=True)
         selected = sorted(indexes[:sentence_count])
@@ -71,7 +79,7 @@ class LexRankSummarizer:
                 matrix[i] = matrix[i] / row_sum
         return matrix
 
-    def _power_method(self, matrix, epsilon=1e-6, max_iterations=100):
+    def _iterate(self, matrix, epsilon=1e-6, max_iterations=100):
         n = matrix.shape[0]
         p = np.array([1.0 / n] * n)
         for _ in range(max_iterations):
