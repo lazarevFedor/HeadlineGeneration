@@ -88,23 +88,33 @@ class App:
             pass
 
     def create_widgets(self):
+        self.root.rowconfigure(1, weight=1)
+        self.root.rowconfigure(5, weight=1)
+        self.root.columnconfigure(0, weight=1)
 
-        tk.Label(self.root, text="Введите текст:").pack()
-        self.text_input = tk.Text(self.root, height=10, width=50)
-        self.text_input.pack()
+        tk.Label(self.root, text="Введите текст:").grid(row=0, column=0, sticky="w", padx=5, pady=2)
+
+        self.text_input = tk.Text(self.root, height=10, wrap="word")
+        self.text_input.grid(row=1, column=0, sticky="nsew", padx=5)
+
         visualize_button = tk.Button(self.root, text="Показать граф", command=self.show_graph)
-        visualize_button.pack()
+        visualize_button.grid(row=2, column=0, sticky="ew", padx=5, pady=2)
 
-        tk.Label(self.root, text="Выберите алгоритм:").pack()
+        tk.Label(self.root, text="Выберите алгоритм:").grid(row=3, column=0, sticky="w", padx=5, pady=2)
+
         algorithm_menu = tk.OptionMenu(self.root, self.algorithm_var, "Text Rank", "Lex Rank")
-        algorithm_menu.pack()
+        algorithm_menu.grid(row=4, column=0, sticky="ew", padx=5)
 
         generate_button = tk.Button(self.root, text="Сгенерировать заголовок", command=self.generate_title)
-        generate_button.pack()
+        generate_button.grid(row=5, column=0, sticky="ew", padx=5, pady=2)
 
-        tk.Label(self.root, text="Заголовок:").pack()
-        self.title_output = tk.Text(self.root, height=5, width=50)
-        self.title_output.pack()
+        tk.Label(self.root, text="Заголовок:").grid(row=6, column=0, sticky="w", padx=5, pady=2)
+
+        self.title_output = tk.Text(self.root, height=5, wrap="word")
+        self.title_output.grid(row=7, column=0, sticky="nsew", padx=5, pady=(0, 5))
+
+        self.root.rowconfigure(7, weight=1)
+
         self.add_context_menu(self.text_input)
         self.add_context_menu(self.title_output)
 
